@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+    environment {
+        PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
+        APP_NAME="petclinic"
+        APP_REPO_NAME="yakut-repo/${APP_NAME}-app-dev"
+        AWS_ACCOUNT_ID=sh(script:'export PATH="$PATH:/usr/local/bin" && aws sts get-caller-identity --query Account --output text', returnStdout:true).trim()
+        AWS_REGION="us-east-1"
+        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        ANS_KEYPAIR="new-call-${APP_NAME}-dev-${BUILD_NUMBER}.key"
+        ANSIBLE_PRIVATE_KEY_FILE="${WORKSPACE}/${ANS_KEYPAIR}"
+        ANSIBLE_HOST_KEY_CHECKING="False"
+    }
+
+    post {
+        always {
+            echo 'Deleting all local images'
+            sh 'docker image prune -af'
+            echo 'Delete the Image Repository on ECR'
+            sh """
+                aws ecr delete-repository \
+                  --repository-name ${APP_REPO_NAME} \
+                  --region ${AWS_REGION}\
+                  --force
+                """
+            echo 'Tear down the Kubernetes Cluster'
+            sh """
+            cd infrastructure/dev-k8s-terraform
+            terraform destroy -auto-approve
+            """
+            echo "Delete existing key pair using AWS CLI"
+            sh "aws ec2 delete-key-pair --region ${AWS_REGION} --key-name ${ANS_KEYPAIR}"
+            sh "rm -rf ${ANS_KEYPAIR}"
+        }
+    }
+}
