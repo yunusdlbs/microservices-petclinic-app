@@ -74,7 +74,7 @@ resource "aws_iam_instance_profile" "profile_for_master" {
 }
 
 resource "aws_iam_instance_profile" "profile_for_worker" {
-  name  = "profile_for_worker1"
+  name  = "profile_for_worker"
   role = aws_iam_role.role_for_worker.name
 }
 
