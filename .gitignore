@@ -20,5 +20,5 @@ generated/
 #VS Code
 .factorypath
 .project
-rancher-cluster.rkestate
+.rkestate
 
